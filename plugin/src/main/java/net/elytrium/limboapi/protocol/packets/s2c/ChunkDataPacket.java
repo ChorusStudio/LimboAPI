@@ -56,17 +56,18 @@ public class ChunkDataPacket implements MinecraftPacket {
   private final ChunkSnapshot chunk;
   private final NetworkSection[] sections;
   private final BitSet mask;
+  // Light data is provided for every light section of the chunk (the world is filled with a uniform
+  // sky level), so the light masks must cover all light sections instead of only the ones with blocks.
+  private final BitSet lightMask;
   private final int maxSections;
-  private final int minY;
   private final int nonNullSections;
   private final BiomeData biomeData;
   private final CompoundBinaryTag heightmap114;
   private final CompoundBinaryTag heightmap116;
   private final Map<Integer, long[]> heightmap1215;
 
-  public ChunkDataPacket(ChunkSnapshot chunkSnapshot, boolean hasLegacySkyLight, int minY, int sectionCount) {
+  public ChunkDataPacket(ChunkSnapshot chunkSnapshot, boolean hasLegacySkyLight, int sectionCount) {
     this.maxSections = sectionCount;
-    this.minY = minY;
     this.sections = new NetworkSection[sectionCount];
 
     this.chunk = chunkSnapshot;
@@ -89,6 +90,8 @@ public class ChunkDataPacket implements MinecraftPacket {
     }
 
     this.nonNullSections = nonNullSections;
+    this.lightMask = new BitSet(this.chunk.getLight().length);
+    this.lightMask.set(0, this.chunk.getLight().length);
     this.heightmap114 = this.createHeightMap(true);
     this.heightmap116 = this.createHeightMap(false);
     this.heightmap1215 = new HashMap<>();
@@ -209,7 +212,7 @@ public class ChunkDataPacket implements MinecraftPacket {
           }
         }
         if (version.compareTo(ProtocolVersion.MINECRAFT_1_17_1) > 0) {
-          long[] mask = this.createMask(version);
+          long[] lightMaskArray = this.lightMask.toLongArray();
           if (version.compareTo(ProtocolVersion.MINECRAFT_1_20) < 0) {
             buf.writeBoolean(true); // Trust edges.
           }

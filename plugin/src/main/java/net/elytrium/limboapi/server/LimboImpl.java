@@ -184,6 +184,7 @@ public class LimboImpl implements Limbo {
   // spawnPlayer() call, so createLimbo() itself stays cheap even for very large worlds.
   private volatile boolean built = false;
   private boolean disposeScheduled = false;
+  private boolean isHardCore = true;
 
   public LimboImpl(LimboAPI plugin, VirtualWorld world) {
     this.plugin = plugin;
@@ -670,7 +671,7 @@ public class LimboImpl implements Limbo {
             task.get().cancel(false);
           }
         }
-      }, 50, 50, TimeUnit.MILLISECONDS));
+      }, Settings.IMP.MAIN.CHUNK_SEND_INTERVAL_MS, Settings.IMP.MAIN.CHUNK_SEND_INTERVAL_MS, TimeUnit.MILLISECONDS));
 
       if (connection.getActiveSessionHandler() instanceof LimboSessionHandlerImpl sessionHandler) {
         sessionHandler.setRespawnTask(task.get());
@@ -787,6 +788,14 @@ public class LimboImpl implements Limbo {
   public Limbo setMaxSuppressPacketLength(int maxSuppressPacketLength) {
     this.maxSuppressPacketLength = maxSuppressPacketLength;
 
+    return this;
+  }
+
+  @Override
+  public Limbo setIsHardCore(boolean isHardCore) {
+    this.isHardCore = isHardCore;
+
+    this.built = false;
     return this;
   }
 
@@ -998,7 +1007,7 @@ public class LimboImpl implements Limbo {
     Dimension dimension = this.world.getDimension();
     JoinGamePacket joinGame = new JoinGamePacket();
     joinGame.setEntityId(1);
-    joinGame.setIsHardcore(true);
+    joinGame.setIsHardcore(this.isHardCore);
     joinGame.setGamemode(this.gameMode);
     // TODO: velocity bug: game uses GameType.OPTIONAL_STREAM_CODEC for 26.3+, but velocity encode optional as single byte.
     //   should work fine even if set to 0. affects only f3+f4 gamemode switching menu.
@@ -1577,7 +1586,7 @@ public class LimboImpl implements Limbo {
 
   private ChunkDataPacket createChunkData(VirtualChunk chunk, Dimension dimension) {
     return new ChunkDataPacket(chunk.getFullChunkSnapshot(), dimension.hasLegacySkyLight(),
-        Settings.IMP.MAIN.MIN_Y, Settings.IMP.MAIN.HEIGHT / 16);
+            Settings.IMP.MAIN.HEIGHT / 16);
   }
 
   public Integer getReadTimeout() {
