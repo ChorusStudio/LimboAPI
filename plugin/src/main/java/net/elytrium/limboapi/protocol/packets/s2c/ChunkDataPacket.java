@@ -216,8 +216,8 @@ public class ChunkDataPacket implements MinecraftPacket {
           if (version.compareTo(ProtocolVersion.MINECRAFT_1_20) < 0) {
             buf.writeBoolean(true); // Trust edges.
           }
-          ProtocolTools.writeBitSet(buf, version, mask); // Skylight mask.
-          ProtocolTools.writeBitSet(buf, version, mask); // BlockLight mask.
+          ProtocolTools.writeBitSet(buf, version, lightMaskArray); // Skylight mask.
+          ProtocolTools.writeBitSet(buf, version, lightMaskArray); // BlockLight mask.
           ProtocolUtils.writeVarInt(buf, 0); // EmptySkylight mask.
           ProtocolUtils.writeVarInt(buf, 0); // EmptyBlockLight mask.
           ProtocolUtils.writeVarInt(buf, this.chunk.getLight().length);

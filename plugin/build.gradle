@@ -309,7 +309,16 @@ File generateData(MinecraftVersion version) {
     File java = new File(System.getProperty("java.home"), "bin/java")
     commandLine = ["bash", "-c", String.format(command, java)]
   }
-  commandLine.execute([], parent).waitFor()
+  Process process = commandLine.execute([], parent)
+  def standardOutput = new StringBuilder()
+  def standardError = new StringBuilder()
+  process.consumeProcessOutput(standardOutput, standardError)
+  int exitCode = process.waitFor()
+  if (exitCode != 0) {
+    throw new GradleException("Minecraft data generator failed for ${version.getVersionName()} " +
+            "(exit code ${exitCode}). Make sure this build runs on a Java 25 or newer JVM.\n" +
+            standardOutput.toString() + standardError.toString())
+  }
 
   // Remove/compact files, reduces disk usage from ~2.9gb to ~92mb (or ~9.5mb on a compressed filesystem)
   jarFile.delete()
@@ -339,6 +348,11 @@ File generateData(MinecraftVersion version) {
     if (it.fileName.toString().endsWith(".json")) {
       java.nio.file.Files.writeString(it, JsonOutput.toJson(new JsonSlurper().parse(it)))
     }
+  }
+
+  File blocksReport = new File(targetDir, "reports/blocks.json")
+  if (!blocksReport.exists()) {
+    throw new GradleException("Minecraft data generator for ${version.getVersionName()} produced no reports/blocks.json")
   }
 
   return targetDir
