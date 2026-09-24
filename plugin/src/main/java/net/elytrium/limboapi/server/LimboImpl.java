@@ -629,11 +629,12 @@ public class LimboImpl implements Limbo {
 
     connection.delayedWrite(playerInfoPacket);
 
-    // Recent clients (1.21.11) expect the server to send the local player's own entity data
+    // Recent clients (1.21.11 / 26.3) expect the server to send the local player's own entity data
     // (skin parts / main arm) on join; without it they keep the default appearance (right hand,
     // no outer skin layers) and ignore the local skin options.
-    if (connection.getProtocolVersion() == ProtocolVersion.MINECRAFT_1_21_11) {
-      connection.delayedWrite(this.createSelfEntityDataPacket(sessionHandler.getSettings()));
+    if (needsSelfEntityData(connection.getProtocolVersion())) {
+      connection.delayedWrite(
+          this.createSelfEntityDataPacket(connection.getProtocolVersion(), sessionHandler.getSettings()));
     }
 
     if (this.limboName != null && !this.limboName.isEmpty()) {
@@ -1568,24 +1569,38 @@ public class LimboImpl implements Limbo {
     return new PositionRotationPacket(posX, posY, posZ, yaw, pitch, false, 44, true);
   }
 
-  private SetEntityDataPacket createSelfEntityDataPacket(ClientSettingsPacket clientSettings) {
+  private static boolean needsSelfEntityData(ProtocolVersion version) {
+    // Clients since 1.21.11 only apply the local skin options / main hand after the server sends
+    // the local player's own entity data. 26.3 needs the same treatment as 1.21.11, with its own
+    // packet id (see LimboProtocol) and its own HUMANOID_ARM serializer id.
+    return version == ProtocolVersion.MINECRAFT_1_21_11 || version == ProtocolVersion.MINECRAFT_26_3;
+  }
+
+  private static int getHumanoidArmSerializerId(ProtocolVersion version) {
+    // EntityDataSerializers ids are assigned by registration order and drift between releases:
+    // 1.21.11 has HUMANOID_ARM at 38, the 26.x protocol at 42.
+    // See https://minecraft.wiki/w/Java_Edition_protocol/Entity_metadata
+    return version.noLessThan(ProtocolVersion.MINECRAFT_26_1) ? 42 : 38;
+  }
+
+  private SetEntityDataPacket createSelfEntityDataPacket(ProtocolVersion version, ClientSettingsPacket clientSettings) {
     int skinParts = clientSettings == null ? 0x7F : clientSettings.getSkinParts();
     // Player skin-parts metadata entry: index 16, BYTE serializer (id 0). Entity id 1 is the local
     // player (see createJoinGamePacket). Recent clients show the outer skin layers only after the
     // server sends the local player's own entity data.
     byte[] skinPartsEntry = new byte[] {16, 0, (byte) skinParts};
-    // Player main-arm metadata entry: index 15, HUMANOID_ARM serializer (id 38). The value is the
-    // client main hand (0 = left, 1 = right), which matches the HumanoidArm enum ordinal.
+    // Player main-arm metadata entry: index 15, HUMANOID_ARM serializer. The value is the client
+    // main hand (0 = left, 1 = right), which matches the HumanoidArm enum ordinal.
     int mainHand = clientSettings == null ? 1 : clientSettings.getMainHand();
-    byte[] mainArmEntry = new byte[] {15, 38, (byte) mainHand};
+    byte[] mainArmEntry = new byte[] {15, (byte) getHumanoidArmSerializerId(version), (byte) mainHand};
     return new SetEntityDataPacket(1, new byte[][] {skinPartsEntry, mainArmEntry});
   }
 
   public void sendSelfEntityData(ConnectedPlayer player, ClientSettingsPacket clientSettings) {
     MinecraftConnection connection = player.getConnection();
-    if (connection.getState() != StateRegistry.CONFIG
-        && connection.getProtocolVersion() == ProtocolVersion.MINECRAFT_1_21_11) {
-      connection.write(this.createSelfEntityDataPacket(clientSettings));
+    ProtocolVersion version = connection.getProtocolVersion();
+    if (connection.getState() != StateRegistry.CONFIG && needsSelfEntityData(version)) {
+      connection.write(this.createSelfEntityDataPacket(version, clientSettings));
     }
   }
 

@@ -250,7 +250,8 @@ public class LimboProtocol {
         SetEntityDataPacket.class, SetEntityDataPacket::new,
         // Paper sends the local player's own entity data on join; without it recent clients keep
         // their default appearance (right hand, no outer skin layers).
-        createMapping(0x61, ProtocolVersion.MINECRAFT_1_21_11, true)
+        createMapping(0x61, ProtocolVersion.MINECRAFT_1_21_11, true),
+        createMapping(0x65, ProtocolVersion.MINECRAFT_26_3, true)
     );
     register(LIMBO_STATE_REGISTRY, PacketDirection.CLIENTBOUND,
         DefaultSpawnPositionPacket.class, DefaultSpawnPositionPacket::new,
