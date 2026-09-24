@@ -14,7 +14,7 @@ allprojects {
     apply(plugin = "net.minecraftforge.licenser")
 
     group = "net.elytrium.limboapi"
-    version = "1.1.28-SNAPSHOT"
+    version = "1.1.28-SNAPSHOT+velocity-4.2.1-SNAPSHOT"
 
     tasks.withType<JavaCompile> {
         sourceCompatibility = JavaVersion.VERSION_25.toString()
