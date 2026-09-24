@@ -371,12 +371,15 @@ public class LimboImpl implements Limbo {
   }
 
   private PreparedPacket addPostJoin(PreparedPacket packet) {
-    return packet.prepare(this.createAvailableCommandsPacket(), ProtocolVersion.MINECRAFT_1_13)
-        .prepare(this.createDefaultSpawnPositionPacket())
-        .prepare(this.createLevelChunksLoadStartGameState(), ProtocolVersion.MINECRAFT_1_20_3)
-        .prepare(this.createWorldTicksPacket())
-        .prepare(this::createBrandMessage)
-        .build();
+    PreparedPacket preparedPacket = packet
+            .prepare(this.createAvailableCommandsPacket(), ProtocolVersion.MINECRAFT_1_13)
+            .prepare(this.createDefaultSpawnPositionPacket())
+            .prepare(this.createLevelChunksLoadStartGameState(), ProtocolVersion.MINECRAFT_1_20_3)
+            .prepare(this.createWorldTicksPacket());
+    if (this.limboName != null && !this.limboName.isEmpty()) {
+      preparedPacket = preparedPacket.prepare(this::createBrandMessage);
+    }
+    return preparedPacket.build();
   }
 
   @Override
@@ -619,7 +622,8 @@ public class LimboImpl implements Limbo {
           EnumSet.of(
               UpsertPlayerInfoPacket.Action.UPDATE_DISPLAY_NAME,
               UpsertPlayerInfoPacket.Action.UPDATE_GAME_MODE,
-              UpsertPlayerInfoPacket.Action.ADD_PLAYER),
+              UpsertPlayerInfoPacket.Action.ADD_PLAYER
+          ),
           List.of(playerInfoEntry));
     }
 
@@ -632,7 +636,9 @@ public class LimboImpl implements Limbo {
       connection.delayedWrite(this.createSelfEntityDataPacket(sessionHandler.getSettings()));
     }
 
-    connection.delayedWrite(this.getBrandMessage(handlerClass));
+    if (this.limboName != null && !this.limboName.isEmpty()) {
+      connection.delayedWrite(this.getBrandMessage(handlerClass));
+    }
 
     this.plugin.setLimboJoined(player);
 
@@ -1544,8 +1550,11 @@ public class LimboImpl implements Limbo {
   }
 
   private PluginMessagePacket createBrandMessage(ProtocolVersion version) {
-    String brand = "LimboAPI (" + Settings.IMP.VERSION + ") -> " + this.limboName;
+    String brand = this.limboName;
     ByteBuf bufWithBrandString = Unpooled.buffer();
+    if (brand == null) {
+      brand = "";
+    }
     if (version.compareTo(ProtocolVersion.MINECRAFT_1_8) < 0) {
       bufWithBrandString.writeCharSequence(brand, StandardCharsets.UTF_8);
     } else {

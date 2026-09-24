@@ -29,6 +29,17 @@ Test server: [``ely.su``](https://hotmc.ru/minecraft-server-203216)
 - Load world from world files like .schematic
 - and more...
 
+## Fork new features
+
+- configurable world height
+- fix player second skin layer
+- allow highly custom server name
+- fix general packet guard
+
+## Limitation
+
+- **ONLY SUPPORT 1.21.11**
+
 ## How to
 
 - Include ``limboapi-api`` to your Maven/Gradle project as compile-only

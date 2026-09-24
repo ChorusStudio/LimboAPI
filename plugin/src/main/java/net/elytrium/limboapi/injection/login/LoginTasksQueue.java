@@ -155,7 +155,8 @@ public class LoginTasksQueue {
               connection.delayedWrite(new UpsertPlayerInfoPacket(
                   EnumSet.of(
                       UpsertPlayerInfoPacket.Action.UPDATE_DISPLAY_NAME,
-                      UpsertPlayerInfoPacket.Action.ADD_PLAYER),
+                      UpsertPlayerInfoPacket.Action.ADD_PLAYER
+                  ),
                   List.of(playerInfoEntry)));
             }
 
